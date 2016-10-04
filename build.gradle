@@ -31,7 +31,12 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
-    compile group: 'org.ow2.asm', name: 'asm', version: '5.1'
+    compile 'org.ow2.asm:asm:5.1'
+    compile 'org.ow2.asm:asm-analysis:5.1'
+    compile 'org.ow2.asm:asm-util:5.1'
+
+    testCompile 'junit:junit:4.12'
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
 }
 
 apply plugin: "maven-publish"
