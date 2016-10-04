@@ -24,13 +24,25 @@ import org.objectweb.asm.Opcodes.ACC_PUBLIC
 class SimpleTest : AbstractASMTest() {
 
     @Test
-    fun classVisiting() {
+    fun testClassSimpleVisiting() {
         val cw = classWriter {
             visitClass(ACC_PUBLIC, "Test") {
                 visitSource("Test.java")
             }
         }
+        assertBytecodeEquals(cw, "testData/simpleClass/Class.dump")
+    }
 
-        assertBytecodeEquals(cw, "testData/simpleClass/ClassVisiting.dump")
+    @Test
+    fun testClassSimpleAnnotationVisiting() {
+        val cw = classWriter {
+            visitClass(ACC_PUBLIC, "Test") {
+                visitSource("Test.java")
+                visitAnnotation("LSomeAnnotation;") {
+
+                }
+            }
+        }
+        assertBytecodeEquals(cw, "testData/simpleClass/Annotation.dump")
     }
 }

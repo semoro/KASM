@@ -16,15 +16,31 @@
 
 package me.semoro.kasm
 
+import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
 
 
+class AnnotationVisitingContext(val visitor: AnnotationVisitor) {
+
+}
+
 class ClassVisitContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
 
     fun visitSource(name: String, debug: String? = null) {
         visitor.visitSource(name, debug)
+    }
+
+    fun visitAnnotation(desc: String, visible: Boolean = true,
+                        callable: AnnotationVisitingContext.() -> Unit): AnnotationVisitor? {
+        val annotationVisitor = visitor.visitAnnotation(desc, visible)
+        annotationVisitor?.let {
+            val context = AnnotationVisitingContext(it)
+            context.callable()
+            it.visitEnd()
+        }
+        return annotationVisitor
     }
 }
 
