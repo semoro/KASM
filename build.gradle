@@ -1,0 +1,65 @@
+group 'me.semoro'
+version '0.0.1'
+
+buildscript {
+    ext.kotlin_version = '1.0.4'
+
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
+    }
+}
+
+
+
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+
+apply plugin: 'kotlin'
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+    compile group: 'org.ow2.asm', name: 'asm', version: '5.1'
+}
+
+apply plugin: "maven-publish"
+publishing {
+    publications {
+        BintrayPublication(MavenPublication) {
+            from components.java
+            groupId 'me.semoro'
+            artifactId rootProject.name
+            version rootProject.version
+        }
+    }
+}
+
+
+apply plugin: 'com.jfrog.bintray'
+
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    pkg {
+        repo = 'github'
+        name = 'KASM'
+        licenses = ['Apache 2']
+        vcsUrl = 'https://github.com/semoro/KASM.git'
+        version {
+            name = rootProject.version
+        }
+    }
+    publications = ["BintrayPublication"]
+}
