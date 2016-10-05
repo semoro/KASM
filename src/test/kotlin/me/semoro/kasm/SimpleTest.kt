@@ -19,6 +19,8 @@ package me.semoro.kasm
 
 import org.junit.Test
 import org.objectweb.asm.Opcodes.ACC_PUBLIC
+import org.objectweb.asm.Opcodes.ACC_STATIC
+import org.objectweb.asm.Type
 
 
 class SimpleTest : AbstractASMTest() {
@@ -44,5 +46,18 @@ class SimpleTest : AbstractASMTest() {
             }
         }
         assertBytecodeEquals(cw, "testData/simpleClass/Annotation.dump")
+    }
+
+    @Test
+    fun testClassWithFieldVisiting() {
+        val cw = classWriter {
+            visitClass(ACC_PUBLIC, "Test") {
+                visitSource("Test.java")
+                visitField(ACC_PUBLIC + ACC_STATIC, "test", Type.DOUBLE_TYPE, value = 0.0) {
+
+                }
+            }
+        }
+        assertBytecodeEquals(cw, "testData/simpleClass/StaticField.dump")
     }
 }

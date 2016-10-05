@@ -17,38 +17,87 @@
 package me.semoro.kasm
 
 
-import org.objectweb.asm.AnnotationVisitor
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.*
 
 
 class ClassVisitorContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
 
-    class AnnotationVisitingContext() {
+    val annotationVisiting by lazy { AnnotationVisitingContext() }
+    val classVisiting by lazy { ClassVisitingContext() }
+    val fieldVisiting by lazy { FieldVisitingContext() }
+
+
+    interface AnnotationVisitingProvider<out TVisitor : ClassVisitor> {
+        fun visitAnnotation(desc: String,
+                            visible: Boolean = true,
+                            callable: ClassVisitorContext<TVisitor>.AnnotationVisitingContext.() -> Unit): AnnotationVisitor?
+
+        fun visitAnnotation(type: Type,
+                            visible: Boolean = true,
+                            callable: ClassVisitorContext<TVisitor>.AnnotationVisitingContext.() -> Unit): AnnotationVisitor?
+                = visitAnnotation(type.descriptor, visible, callable)
+    }
+
+    interface FieldVisitingProvider<out TVisitor : ClassVisitor> {
+        fun visitField(access: Int,
+                       name: String,
+                       desc: String,
+                       signature: String? = null,
+                       value: Any? = null,
+                       callable: ClassVisitorContext<TVisitor>.FieldVisitingContext.() -> Unit): FieldVisitor?
+
+        fun visitField(access: Int,
+                       name: String,
+                       type: Type,
+                       signature: String? = null,
+                       value: Any? = null,
+                       callable: ClassVisitorContext<TVisitor>.FieldVisitingContext.() -> Unit): FieldVisitor?
+                = visitField(access, name, type.descriptor, signature, value, callable)
+    }
+
+    inner class AnnotationVisitingContext() {
         lateinit var visitor: AnnotationVisitor
     }
 
-    inner class ClassVisitingContext() {
+    inner class FieldVisitingContext() : AnnotationVisitingProvider<TVisitor> {
+        override fun visitAnnotation(desc: String, visible: Boolean, callable: AnnotationVisitingContext.() -> Unit)
+                = visitor.visitAnnotation(desc, visible)?.
+                apply {
+                    annotationVisiting.visitor = this
+                    annotationVisiting.callable()
+                    visitEnd()
+                }
+
+        lateinit var visitor: FieldVisitor
+    }
+
+
+    inner class ClassVisitingContext() : AnnotationVisitingProvider<TVisitor>, FieldVisitingProvider<TVisitor> {
 
         fun visitSource(name: String, debug: String? = null) {
             visitor.visitSource(name, debug)
         }
 
-        fun visitAnnotation(desc: String, visible: Boolean = true,
-                            callable: AnnotationVisitingContext.() -> Unit): AnnotationVisitor? {
-            val annotationVisitor = visitor.visitAnnotation(desc, visible)
-            annotationVisitor?.let {
-                annotationVisiting.visitor = it
-                annotationVisiting.callable()
-                it.visitEnd()
-            }
-            return annotationVisitor
-        }
+        override fun visitAnnotation(desc: String, visible: Boolean, callable: AnnotationVisitingContext.() -> Unit)
+                = visitor.visitAnnotation(desc, visible)?.
+                apply {
+                    annotationVisiting.visitor = this
+                    annotationVisiting.callable()
+                    visitEnd()
+                }
+
+
+        override fun visitField(access: Int, name: String, desc: String, signature: String?, value: Any?, callable: FieldVisitingContext.() -> Unit)
+                = visitor.visitField(access, name, desc, signature, value)?.
+                apply {
+                    fieldVisiting.visitor = this
+                    fieldVisiting.callable()
+                    visitEnd()
+                }
+
     }
 
-    val annotationVisiting by lazy { AnnotationVisitingContext() }
-    val classVisiting by lazy { ClassVisitingContext() }
+
     fun visitClass(access: Int,
                    name: String,
                    superClass: String? = "java/lang/Object",
