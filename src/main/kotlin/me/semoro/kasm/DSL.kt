@@ -16,46 +16,48 @@
 
 package me.semoro.kasm
 
+
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
 
 
-class AnnotationVisitingContext(val visitor: AnnotationVisitor) {
-
-}
-
-class ClassVisitContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
-
-    fun visitSource(name: String, debug: String? = null) {
-        visitor.visitSource(name, debug)
-    }
-
-    fun visitAnnotation(desc: String, visible: Boolean = true,
-                        callable: AnnotationVisitingContext.() -> Unit): AnnotationVisitor? {
-        val annotationVisitor = visitor.visitAnnotation(desc, visible)
-        annotationVisitor?.let {
-            val context = AnnotationVisitingContext(it)
-            context.callable()
-            it.visitEnd()
-        }
-        return annotationVisitor
-    }
-}
-
 class ClassVisitorContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
 
+    class AnnotationVisitingContext() {
+        lateinit var visitor: AnnotationVisitor
+    }
+
+    inner class ClassVisitingContext() {
+
+        fun visitSource(name: String, debug: String? = null) {
+            visitor.visitSource(name, debug)
+        }
+
+        fun visitAnnotation(desc: String, visible: Boolean = true,
+                            callable: AnnotationVisitingContext.() -> Unit): AnnotationVisitor? {
+            val annotationVisitor = visitor.visitAnnotation(desc, visible)
+            annotationVisitor?.let {
+                annotationVisiting.visitor = it
+                annotationVisiting.callable()
+                it.visitEnd()
+            }
+            return annotationVisitor
+        }
+    }
+
+    val annotationVisiting by lazy { AnnotationVisitingContext() }
+    val classVisiting by lazy { ClassVisitingContext() }
     fun visitClass(access: Int,
                    name: String,
                    superClass: String? = "java/lang/Object",
                    interfaces: Array<String>? = null,
                    signature: String? = null,
                    version: Int = defaultClassVersion,
-                   contextCallable: ClassVisitContext<TVisitor>.() -> Unit) {
+                   contextCallable: ClassVisitingContext.() -> Unit) {
         visitor.visit(version, access, name, signature, superClass, interfaces)
-        val context = ClassVisitContext(visitor)
-        context.contextCallable()
+        classVisiting.contextCallable()
         visitor.visitEnd()
     }
 
