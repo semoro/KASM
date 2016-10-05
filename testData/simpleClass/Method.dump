@@ -1,0 +1,12 @@
+// class version 52.0 (52)
+// access flags 0x1
+public class Test {
+
+  // compiled from: Test.java
+
+  // access flags 0x1
+  public test()V
+    RETURN
+    MAXSTACK = 0
+    MAXLOCALS = 1
+}

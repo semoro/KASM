@@ -25,6 +25,7 @@ class ClassVisitorContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
     val annotationVisiting by lazy { AnnotationVisitingContext() }
     val classVisiting by lazy { ClassVisitingContext() }
     val fieldVisiting by lazy { FieldVisitingContext() }
+    val methodVisiting by lazy { MethodVisitingContext() }
 
 
     interface AnnotationVisitingProvider<out TVisitor : ClassVisitor> {
@@ -55,11 +56,43 @@ class ClassVisitorContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
                 = visitField(access, name, type.descriptor, signature, value, callable)
     }
 
+    interface AttributeVisitingProvider<out TVisitor : ClassVisitor> {
+        fun visitAttribute(attr: Attribute)
+
+        fun visitAttribute(attributeBuilder: () -> Attribute) {
+            visitAttribute(attributeBuilder())
+        }
+    }
+
+    interface MethodVisitingProvider<out TVisitor : ClassVisitor> {
+        fun visitMethod(
+                access: Int,
+                name: String,
+                desc: String,
+                signature: String? = null,
+                exceptions: Array<String>? = null,
+                callable: ClassVisitorContext<TVisitor>.MethodVisitingContext.() -> Unit
+        ): MethodVisitor?
+
+        fun visitMethod(
+                access: Int,
+                name: String,
+                type: Type,
+                signature: String? = null,
+                exceptions: Array<String>? = null,
+                callable: ClassVisitorContext<TVisitor>.MethodVisitingContext.() -> Unit
+        ) = visitMethod(access, name, type.descriptor, signature, exceptions, callable)
+    }
+
     inner class AnnotationVisitingContext() {
         lateinit var visitor: AnnotationVisitor
     }
 
-    inner class FieldVisitingContext() : AnnotationVisitingProvider<TVisitor> {
+    inner class FieldVisitingContext() : AnnotationVisitingProvider<TVisitor>, AttributeVisitingProvider<TVisitor> {
+        override fun visitAttribute(attr: Attribute) {
+            visitor.visitAttribute(attr)
+        }
+
         override fun visitAnnotation(desc: String, visible: Boolean, callable: AnnotationVisitingContext.() -> Unit)
                 = visitor.visitAnnotation(desc, visible)?.
                 apply {
@@ -71,11 +104,37 @@ class ClassVisitorContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
         lateinit var visitor: FieldVisitor
     }
 
+    inner class MethodVisitingContext() : AnnotationVisitingProvider<TVisitor>, AttributeVisitingProvider<TVisitor> {
 
-    inner class ClassVisitingContext() : AnnotationVisitingProvider<TVisitor>, FieldVisitingProvider<TVisitor> {
+        override fun visitAnnotation(desc: String, visible: Boolean, callable: AnnotationVisitingContext.() -> Unit)
+                = visitor.visitAnnotation(desc, visible)?.
+                apply {
+                    annotationVisiting.visitor = this
+                    annotationVisiting.callable()
+                    visitEnd()
+                }
+
+        override fun visitAttribute(attr: Attribute) {
+            visitor.visitAttribute(attr)
+        }
+
+
+        lateinit var visitor: MethodVisitor
+    }
+
+
+    inner class ClassVisitingContext() :
+            AnnotationVisitingProvider<TVisitor>,
+            FieldVisitingProvider<TVisitor>,
+            AttributeVisitingProvider<TVisitor>,
+            MethodVisitingProvider<TVisitor> {
 
         fun visitSource(name: String, debug: String? = null) {
             visitor.visitSource(name, debug)
+        }
+
+        override fun visitAttribute(attr: Attribute) {
+            visitor.visitAttribute(attr)
         }
 
         override fun visitAnnotation(desc: String, visible: Boolean, callable: AnnotationVisitingContext.() -> Unit)
@@ -92,6 +151,14 @@ class ClassVisitorContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
                 apply {
                     fieldVisiting.visitor = this
                     fieldVisiting.callable()
+                    visitEnd()
+                }
+
+        override fun visitMethod(access: Int, name: String, desc: String, signature: String?, exceptions: Array<String>?, callable: MethodVisitingContext.() -> Unit): MethodVisitor?
+                = visitor.visitMethod(access, name, desc, signature, exceptions)?.
+                apply {
+                    methodVisiting.visitor = this
+                    methodVisiting.callable()
                     visitEnd()
                 }
 
@@ -115,23 +182,20 @@ class ClassVisitorContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
     }
 }
 
-typealias ClassVisitorContextCallable<T> = ClassVisitorContext<T>.() -> Unit
 
-
-
-fun classWriter(classWriter: ClassWriter, callable: ClassVisitorContextCallable<ClassWriter>): ClassWriter {
+fun classWriter(classWriter: ClassWriter, callable: ClassVisitorContext<ClassWriter>.() -> Unit): ClassWriter {
     val context = ClassVisitorContext(classWriter)
     context.callable()
     return classWriter
 }
 
-fun classWriter(flags: Int = 0, callable: ClassVisitorContextCallable<ClassWriter>): ClassWriter {
+fun classWriter(flags: Int = 0, callable: ClassVisitorContext<ClassWriter>.() -> Unit): ClassWriter {
     val writer = ClassWriter(flags)
     classWriter(writer, callable)
     return writer
 }
 
-fun classWriter(classReader: ClassReader, flags: Int = 0, callable: ClassVisitorContextCallable<ClassWriter>): ClassWriter {
+fun classWriter(classReader: ClassReader, flags: Int = 0, callable: ClassVisitorContext<ClassWriter>.() -> Unit): ClassWriter {
     val writer = ClassWriter(classReader, flags)
     classWriter(writer, callable)
     return writer

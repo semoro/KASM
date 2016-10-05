@@ -18,8 +18,8 @@ package me.semoro.kasm
 
 
 import org.junit.Test
-import org.objectweb.asm.Opcodes.ACC_PUBLIC
-import org.objectweb.asm.Opcodes.ACC_STATIC
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 
 
@@ -59,5 +59,18 @@ class SimpleTest : AbstractASMTest() {
             }
         }
         assertBytecodeEquals(cw, "testData/simpleClass/StaticField.dump")
+    }
+
+    @Test
+    fun testEmptyMethod() {
+        val cw = classWriter(flags = ClassWriter.COMPUTE_MAXS + ClassWriter.COMPUTE_FRAMES) {
+            visitClass(ACC_PUBLIC, "Test") {
+                visitSource("Test.java")
+                visitMethod(ACC_PUBLIC, "test", Type.getMethodType(Type.VOID_TYPE)) {
+                    visitor.visitInsn(RETURN)
+                }
+            }
+        }
+        assertBytecodeEquals(cw, "testData/simpleClass/Method.dump")
     }
 }
