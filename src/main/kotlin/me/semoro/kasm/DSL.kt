@@ -17,6 +17,7 @@
 package me.semoro.kasm
 
 
+import me.semoro.kasm.contexts.ClassVisitorContext
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 
