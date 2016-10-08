@@ -62,11 +62,19 @@ class SimpleTest : AbstractASMTest() {
     }
 
     @Test
-    fun testEmptyMethod() {
+    fun testMethods() {
         val cw = classWriter(flags = ClassWriter.COMPUTE_MAXS + ClassWriter.COMPUTE_FRAMES) {
             visitClass(ACC_PUBLIC, "Test") {
                 visitSource("Test.java")
                 visitMethod(ACC_PUBLIC, "test", Type.getMethodType(Type.VOID_TYPE)) {
+                    visitor.visitInsn(RETURN)
+                }
+
+                visitMethod(ACC_PUBLIC, "test2", Type.getMethodType(Type.VOID_TYPE, Type.BOOLEAN_TYPE)) {
+                    visitParameter(0, "var1")
+                    visitCode {
+
+                    }
                     visitor.visitInsn(RETURN)
                 }
             }

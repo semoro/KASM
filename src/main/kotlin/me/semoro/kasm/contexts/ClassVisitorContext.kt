@@ -22,8 +22,9 @@ import org.objectweb.asm.ClassVisitor
 class ClassVisitorContext<out TVisitor : ClassVisitor>(val visitor: TVisitor) {
 
     private val annotationVisiting = lazy { AnnotationVisitingContext() }
+    private val methodCodeVisiting = lazy { MethodCodeVisitingContext() }
     private val fieldVisiting = lazy { FieldVisitingContext(annotationVisiting) }
-    private val methodVisiting = lazy { MethodVisitingContext(annotationVisiting) }
+    private val methodVisiting = lazy { MethodVisitingContext(annotationVisiting, methodCodeVisiting) }
     private val classVisiting = lazy { ClassVisitingContext(visitor, annotationVisiting, fieldVisiting, methodVisiting) }
     val classVisitingContext by classVisiting
 
